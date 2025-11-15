@@ -28,9 +28,18 @@ var listCmd = &cobra.Command{
 			if task.Completed {
 				status = "[✓]"
 			}
-			fmt.Printf("%s %d. %s\n", status, task.ID, task.Title)
+
+			title := task.Title
+			if task.IsRecurring() {
+				title = fmt.Sprintf("%s ↻", task.Title)
+			}
+
+			fmt.Printf("%s %d. %s\n", status, task.ID, title)
 			if task.Details != "" {
 				fmt.Printf("   %s\n", task.Details)
+			}
+			if task.IsRecurring() {
+				fmt.Printf("   Recurs: %s\n", task.RecurrencePattern.String())
 			}
 		}
 
@@ -65,9 +74,18 @@ var pastCmd = &cobra.Command{
 			if task.Completed {
 				status = "[✓]"
 			}
-			fmt.Printf("%s %d. %s\n", status, task.ID, task.Title)
+
+			title := task.Title
+			if task.IsRecurring() {
+				title = fmt.Sprintf("%s ↻", task.Title)
+			}
+
+			fmt.Printf("%s %d. %s\n", status, task.ID, title)
 			if task.Details != "" {
 				fmt.Printf("   %s\n", task.Details)
+			}
+			if task.IsRecurring() {
+				fmt.Printf("   Recurs: %s\n", task.RecurrencePattern.String())
 			}
 		}
 
@@ -102,9 +120,18 @@ var futureCmd = &cobra.Command{
 			if task.Completed {
 				status = "[✓]"
 			}
-			fmt.Printf("%s %d. %s\n", status, task.ID, task.Title)
+
+			title := task.Title
+			if task.IsRecurring() {
+				title = fmt.Sprintf("%s ↻", task.Title)
+			}
+
+			fmt.Printf("%s %d. %s\n", status, task.ID, title)
 			if task.Details != "" {
 				fmt.Printf("   %s\n", task.Details)
+			}
+			if task.IsRecurring() {
+				fmt.Printf("   Recurs: %s\n", task.RecurrencePattern.String())
 			}
 		}
 

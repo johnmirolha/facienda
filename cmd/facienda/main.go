@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/johnmirolha/facienda/cmd"
+	"github.com/johnmirolha/facienda/internal/commands"
 )
 
 func main() {
-	if err := cmd.Execute(); err != nil {
+	if err := commands.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}

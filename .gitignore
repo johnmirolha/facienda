@@ -7,6 +7,8 @@
 *.dll
 *.so
 *.dylib
+/facienda
+/facienda-*
 
 # Test binary, built with `go test -c`
 *.test

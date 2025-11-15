@@ -36,19 +36,31 @@
 
 ## Current State
 
-**Status**: Early Development / Initial Setup
+**Status**: Implemented and Functional
 
-The repository is currently in its initial state with:
-- Basic project files (README.md, LICENSE, .gitignore)
-- Git repository initialized
-- No source code implemented yet
+The application is now fully functional with:
+- Go module initialized (`github.com/johnmirolha/facienda`)
+- Complete project structure following Go best practices
+- SQLite storage implementation with migrations
+- Full CLI interface using Cobra framework
+- Comprehensive integration tests
 
-**Next Steps**:
-- Set up Go module initialization
-- Create basic project structure
-- Implement core TODO functionality
-- Add CLI interface
-- Implement data persistence
+**Implemented Features**:
+- ✓ Add tasks with specific dates (defaults to today)
+- ✓ Mark tasks as completed/incomplete
+- ✓ Tasks with title and optional details
+- ✓ Edit task details
+- ✓ View current tasks
+- ✓ View past tasks (timeline)
+- ✓ View future tasks
+- ✓ SQLite database storage (~/.facienda.db)
+
+**Future Enhancements**:
+- Task priority levels
+- Task categories/tags
+- Search and filter functionality
+- Task recurrence
+- Export/import functionality
 
 ---
 
@@ -59,28 +71,15 @@ The repository is currently in its initial state with:
 - **Target Platform**: Cross-platform CLI (Linux, macOS, Windows)
 - **Build Tool**: Go toolchain (go build, go test)
 
-### Expected Dependencies
-When implementing features, prefer standard library solutions. Consider these libraries for specific needs:
+### Current Dependencies
 
-- **CLI Framework**:
-  - `github.com/spf13/cobra` - for robust CLI commands
-  - `github.com/urfave/cli` - alternative CLI framework
-  - Standard library `flag` package for simple cases
-
-- **Data Persistence**:
-  - JSON files (using standard library)
-  - SQLite (`github.com/mattn/go-sqlite3`) for structured storage
-  - Plain text formats for simplicity
-
-- **Testing**:
-  - Standard library `testing` package
-  - `github.com/stretchr/testify` for assertions (optional)
+- **CLI Framework**: `github.com/spf13/cobra` - robust CLI command framework
+- **Database**: `github.com/mattn/go-sqlite3` - SQLite driver for Go
+- **Testing**: Standard library `testing` package
 
 ---
 
-## Expected Project Structure
-
-As the project develops, follow this recommended structure:
+## Current Project Structure
 
 ```
 facienda/
@@ -95,22 +94,17 @@ facienda/
 ├── cmd/                    # Command implementations
 │   ├── root.go            # Root command setup
 │   ├── add.go             # Add task command
-│   ├── list.go            # List tasks command
-│   ├── complete.go        # Complete task command
-│   └── delete.go          # Delete task command
+│   ├── list.go            # List/view commands (current, past, future)
+│   ├── complete.go        # Complete/incomplete commands
+│   └── edit.go            # Edit task command
 ├── internal/              # Private application code
 │   ├── todo/              # TODO business logic
-│   │   ├── todo.go        # Todo struct and methods
-│   │   └── todo_test.go   # Unit tests
-│   ├── storage/           # Data persistence layer
-│   │   ├── storage.go     # Storage interface
-│   │   ├── json.go        # JSON storage implementation
-│   │   └── storage_test.go
-│   └── config/            # Configuration handling
-│       └── config.go
-├── pkg/                   # Public, reusable packages (if needed)
-├── testdata/              # Test fixtures and data
-└── docs/                  # Additional documentation
+│   │   └── todo.go        # Task struct and methods
+│   └── storage/           # Data persistence layer
+│       ├── storage.go     # Storage interface
+│       ├── sqlite.go      # SQLite implementation
+│       └── sqlite_test.go # Integration tests
+└── testdata/              # Test fixtures and data
 ```
 
 ### Directory Purposes

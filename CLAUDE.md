@@ -90,14 +90,16 @@ facienda/
 ├── CLAUDE.md               # This file - AI assistant guide
 ├── go.mod                  # Go module file
 ├── go.sum                  # Go dependencies checksum
-├── main.go                 # Application entry point
-├── cmd/                    # Command implementations
-│   ├── root.go            # Root command setup
-│   ├── add.go             # Add task command
-│   ├── list.go            # List/view commands (current, past, future)
-│   ├── complete.go        # Complete/incomplete commands
-│   └── edit.go            # Edit task command
+├── cmd/                    # Application binaries
+│   └── facienda/          # Main application
+│       └── main.go        # Application entry point
 ├── internal/              # Private application code
+│   ├── commands/          # CLI command implementations
+│   │   ├── root.go        # Root command setup
+│   │   ├── add.go         # Add task command
+│   │   ├── list.go        # List/view commands (current, past, future)
+│   │   ├── complete.go    # Complete/incomplete commands
+│   │   └── edit.go        # Edit task command
 │   ├── todo/              # TODO business logic
 │   │   └── todo.go        # Task struct and methods
 │   └── storage/           # Data persistence layer
@@ -109,8 +111,11 @@ facienda/
 
 ### Directory Purposes
 
-- **cmd/**: Command-line interface commands and subcommands
+- **cmd/**: Application entry points (main packages for binaries)
 - **internal/**: Private application code that cannot be imported by other projects
+  - **commands/**: CLI command implementations (Cobra commands)
+  - **todo/**: Core business logic for TODO operations
+  - **storage/**: Data persistence layer
 - **pkg/**: Public libraries that can be imported (use sparingly)
 - **testdata/**: Test fixtures, sample data files
 
@@ -135,22 +140,22 @@ go mod tidy
 
 ```bash
 # Build the application
-go build -o facienda .
+go build -o facienda ./cmd/facienda
 
 # Build for specific platform
-GOOS=linux GOARCH=amd64 go build -o facienda-linux .
-GOOS=windows GOARCH=amd64 go build -o facienda.exe .
-GOOS=darwin GOARCH=amd64 go build -o facienda-mac .
+GOOS=linux GOARCH=amd64 go build -o facienda-linux ./cmd/facienda
+GOOS=windows GOARCH=amd64 go build -o facienda.exe ./cmd/facienda
+GOOS=darwin GOARCH=amd64 go build -o facienda-mac ./cmd/facienda
 ```
 
 ### Running
 
 ```bash
 # Run without building
-go run main.go
+go run ./cmd/facienda
 
 # Run with arguments
-go run main.go add "My new task"
+go run ./cmd/facienda add "My new task"
 
 # Run built binary
 ./facienda list
@@ -415,11 +420,11 @@ Before completing a task, verify:
 ### Common Patterns
 
 **Adding a new TODO command**:
-1. Create command file in `cmd/` (e.g., `cmd/complete.go`)
+1. Create command file in `internal/commands/` (e.g., `internal/commands/delete.go`)
 2. Implement business logic in `internal/todo/`
 3. Add tests in `internal/todo/todo_test.go`
 4. Update storage if needed
-5. Register command in `cmd/root.go`
+5. Register command in `internal/commands/root.go`
 
 **Adding data persistence**:
 1. Define interface in `internal/storage/storage.go`
@@ -453,8 +458,11 @@ Before completing a task, verify:
 # Create Go module
 go mod init github.com/johnmirolha/facienda
 
+# Create directory structure
+mkdir -p cmd/facienda
+
 # Create basic main.go
-cat > main.go << 'EOF'
+cat > cmd/facienda/main.go << 'EOF'
 package main
 
 import "fmt"
@@ -465,7 +473,7 @@ func main() {
 EOF
 
 # Test it works
-go run main.go
+go run ./cmd/facienda
 ```
 
 ### Adding a Dependency
@@ -482,7 +490,7 @@ go mod tidy
 
 ```bash
 # Build optimized binary
-go build -ldflags="-s -w" -o facienda .
+go build -ldflags="-s -w" -o facienda ./cmd/facienda
 
 # The -ldflags="-s -w" strips debug info for smaller binary
 ```
@@ -491,10 +499,10 @@ go build -ldflags="-s -w" -o facienda .
 
 ```bash
 # Run with race detector
-go run -race main.go
+go run -race ./cmd/facienda
 
 # Use delve debugger
-dlv debug main.go
+dlv debug ./cmd/facienda
 ```
 
 ---

@@ -89,6 +89,48 @@ func TestParsePattern(t *testing.T) {
 			wantErr:     true,
 			expectedErr: ErrInvalidPattern,
 		},
+		{
+			name:    "1st weekday of the month",
+			input:   "1st weekday of the month",
+			want:    "monthly-nth-weekday:1",
+			wantErr: false,
+		},
+		{
+			name:    "first weekday of month",
+			input:   "first weekday of month",
+			want:    "monthly-nth-weekday:1",
+			wantErr: false,
+		},
+		{
+			name:    "2nd weekday of the month",
+			input:   "2nd weekday of the month",
+			want:    "monthly-nth-weekday:2",
+			wantErr: false,
+		},
+		{
+			name:    "second weekday of month",
+			input:   "second weekday of month",
+			want:    "monthly-nth-weekday:2",
+			wantErr: false,
+		},
+		{
+			name:    "3rd weekday of the month",
+			input:   "3rd weekday of the month",
+			want:    "monthly-nth-weekday:3",
+			wantErr: false,
+		},
+		{
+			name:    "last weekend of the month",
+			input:   "last weekend of the month",
+			want:    "monthly-last-weekend",
+			wantErr: false,
+		},
+		{
+			name:    "last weekend of month",
+			input:   "last weekend of month",
+			want:    "monthly-last-weekend",
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -249,6 +291,164 @@ func TestPattern_NextOccurrence_Monthly(t *testing.T) {
 	}
 }
 
+func TestPattern_NextOccurrence_NthWeekday(t *testing.T) {
+	tests := []struct {
+		name      string
+		pattern   Pattern
+		after     time.Time
+		wantYear  int
+		wantMonth time.Month
+		wantDay   int
+	}{
+		{
+			name:      "1st weekday - from start of month",
+			pattern:   "monthly-nth-weekday:1",
+			after:     time.Date(2025, 11, 1, 12, 0, 0, 0, time.UTC), // Nov 1, 2025 (Saturday)
+			wantYear:  2025,
+			wantMonth: time.November,
+			wantDay:   3, // Monday Nov 3
+		},
+		{
+			name:      "1st weekday - after 1st weekday",
+			pattern:   "monthly-nth-weekday:1",
+			after:     time.Date(2025, 11, 5, 12, 0, 0, 0, time.UTC), // Nov 5 (Wednesday)
+			wantYear:  2025,
+			wantMonth: time.December,
+			wantDay:   1, // Monday Dec 1
+		},
+		{
+			name:      "2nd weekday - from start of month",
+			pattern:   "monthly-nth-weekday:2",
+			after:     time.Date(2025, 11, 1, 12, 0, 0, 0, time.UTC), // Nov 1, 2025 (Saturday)
+			wantYear:  2025,
+			wantMonth: time.November,
+			wantDay:   4, // Tuesday Nov 4
+		},
+		{
+			name:      "2nd weekday - after 2nd weekday",
+			pattern:   "monthly-nth-weekday:2",
+			after:     time.Date(2025, 11, 5, 12, 0, 0, 0, time.UTC), // Nov 5 (Wednesday)
+			wantYear:  2025,
+			wantMonth: time.December,
+			wantDay:   2, // Tuesday Dec 2
+		},
+		{
+			name:      "1st weekday - month starts on Monday",
+			pattern:   "monthly-nth-weekday:1",
+			after:     time.Date(2025, 12, 1, 0, 0, 0, 0, time.UTC), // Dec 1, 2025 (Monday)
+			wantYear:  2026,
+			wantMonth: time.January,
+			wantDay:   1, // Thursday Jan 1, 2026
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.pattern.NextOccurrence(tt.after)
+			if err != nil {
+				t.Errorf("NextOccurrence() error = %v", err)
+				return
+			}
+
+			if got.Year() != tt.wantYear {
+				t.Errorf("NextOccurrence() year = %d, want %d", got.Year(), tt.wantYear)
+			}
+			if got.Month() != tt.wantMonth {
+				t.Errorf("NextOccurrence() month = %v, want %v", got.Month(), tt.wantMonth)
+			}
+			if got.Day() != tt.wantDay {
+				t.Errorf("NextOccurrence() day = %d, want %d (got %v)", got.Day(), tt.wantDay, got.Weekday())
+			}
+
+			// Verify it's a weekday
+			if got.Weekday() < time.Monday || got.Weekday() > time.Friday {
+				t.Errorf("NextOccurrence() weekday = %v, expected Monday-Friday", got.Weekday())
+			}
+
+			// Check that time is set to start of day
+			if got.Hour() != 0 || got.Minute() != 0 || got.Second() != 0 {
+				t.Errorf("NextOccurrence() time = %02d:%02d:%02d, want 00:00:00",
+					got.Hour(), got.Minute(), got.Second())
+			}
+		})
+	}
+}
+
+func TestPattern_NextOccurrence_LastWeekend(t *testing.T) {
+	tests := []struct {
+		name      string
+		pattern   Pattern
+		after     time.Time
+		wantYear  int
+		wantMonth time.Month
+		wantDay   int
+	}{
+		{
+			name:      "last weekend - from start of month",
+			pattern:   "monthly-last-weekend",
+			after:     time.Date(2025, 11, 1, 12, 0, 0, 0, time.UTC),
+			wantYear:  2025,
+			wantMonth: time.November,
+			wantDay:   30, // Sunday Nov 30, 2025
+		},
+		{
+			name:      "last weekend - after last weekend",
+			pattern:   "monthly-last-weekend",
+			after:     time.Date(2025, 11, 30, 12, 0, 0, 0, time.UTC),
+			wantYear:  2025,
+			wantMonth: time.December,
+			wantDay:   28, // Sunday Dec 28, 2025
+		},
+		{
+			name:      "last weekend - mid month",
+			pattern:   "monthly-last-weekend",
+			after:     time.Date(2025, 11, 15, 12, 0, 0, 0, time.UTC),
+			wantYear:  2025,
+			wantMonth: time.November,
+			wantDay:   30, // Sunday Nov 30, 2025
+		},
+		{
+			name:      "last weekend - February 2025",
+			pattern:   "monthly-last-weekend",
+			after:     time.Date(2025, 2, 1, 12, 0, 0, 0, time.UTC),
+			wantYear:  2025,
+			wantMonth: time.February,
+			wantDay:   23, // Sunday Feb 23, 2025
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.pattern.NextOccurrence(tt.after)
+			if err != nil {
+				t.Errorf("NextOccurrence() error = %v", err)
+				return
+			}
+
+			if got.Year() != tt.wantYear {
+				t.Errorf("NextOccurrence() year = %d, want %d", got.Year(), tt.wantYear)
+			}
+			if got.Month() != tt.wantMonth {
+				t.Errorf("NextOccurrence() month = %v, want %v", got.Month(), tt.wantMonth)
+			}
+			if got.Day() != tt.wantDay {
+				t.Errorf("NextOccurrence() day = %d, want %d (got %v)", got.Day(), tt.wantDay, got.Weekday())
+			}
+
+			// Verify it's a weekend day
+			if got.Weekday() != time.Saturday && got.Weekday() != time.Sunday {
+				t.Errorf("NextOccurrence() weekday = %v, expected Saturday or Sunday", got.Weekday())
+			}
+
+			// Check that time is set to start of day
+			if got.Hour() != 0 || got.Minute() != 0 || got.Second() != 0 {
+				t.Errorf("NextOccurrence() time = %02d:%02d:%02d, want 00:00:00",
+					got.Hour(), got.Minute(), got.Second())
+			}
+		})
+	}
+}
+
 func TestPattern_String(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -279,6 +479,21 @@ func TestPattern_String(t *testing.T) {
 			name:    "monthly 1",
 			pattern: "monthly:1",
 			want:    "Day 1 of each month",
+		},
+		{
+			name:    "1st weekday",
+			pattern: "monthly-nth-weekday:1",
+			want:    "1st weekday of each month",
+		},
+		{
+			name:    "2nd weekday",
+			pattern: "monthly-nth-weekday:2",
+			want:    "2nd weekday of each month",
+		},
+		{
+			name:    "last weekend",
+			pattern: "monthly-last-weekend",
+			want:    "Last weekend of each month",
 		},
 	}
 

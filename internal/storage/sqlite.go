@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/johnmirolha/facienda/internal/recurrence"
 	"github.com/johnmirolha/facienda/internal/todo"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -40,6 +41,7 @@ func (s *SQLiteStorage) migrate() error {
 		details TEXT,
 		date DATETIME NOT NULL,
 		completed BOOLEAN NOT NULL DEFAULT 0,
+		recurrence_pattern TEXT NOT NULL DEFAULT '',
 		created_at DATETIME NOT NULL,
 		updated_at DATETIME NOT NULL
 	);
@@ -47,14 +49,24 @@ func (s *SQLiteStorage) migrate() error {
 	CREATE INDEX IF NOT EXISTS idx_tasks_completed ON tasks(completed);
 	`
 
-	_, err := s.db.Exec(query)
-	return err
+	if _, err := s.db.Exec(query); err != nil {
+		return err
+	}
+
+	// Add recurrence_pattern column if it doesn't exist (for existing databases)
+	alterQuery := `
+	ALTER TABLE tasks ADD COLUMN recurrence_pattern TEXT NOT NULL DEFAULT '';
+	`
+	// This will fail if the column already exists, which is fine
+	s.db.Exec(alterQuery)
+
+	return nil
 }
 
 func (s *SQLiteStorage) Create(task *todo.Task) error {
 	query := `
-	INSERT INTO tasks (title, details, date, completed, created_at, updated_at)
-	VALUES (?, ?, ?, ?, ?, ?)
+	INSERT INTO tasks (title, details, date, completed, recurrence_pattern, created_at, updated_at)
+	VALUES (?, ?, ?, ?, ?, ?, ?)
 	`
 
 	result, err := s.db.Exec(query,
@@ -62,6 +74,7 @@ func (s *SQLiteStorage) Create(task *todo.Task) error {
 		task.Details,
 		task.Date,
 		task.Completed,
+		string(task.RecurrencePattern),
 		task.CreatedAt,
 		task.UpdatedAt,
 	)
@@ -80,18 +93,20 @@ func (s *SQLiteStorage) Create(task *todo.Task) error {
 
 func (s *SQLiteStorage) GetByID(id int64) (*todo.Task, error) {
 	query := `
-	SELECT id, title, details, date, completed, created_at, updated_at
+	SELECT id, title, details, date, completed, recurrence_pattern, created_at, updated_at
 	FROM tasks
 	WHERE id = ?
 	`
 
 	task := &todo.Task{}
+	var recurrencePattern string
 	err := s.db.QueryRow(query, id).Scan(
 		&task.ID,
 		&task.Title,
 		&task.Details,
 		&task.Date,
 		&task.Completed,
+		&recurrencePattern,
 		&task.CreatedAt,
 		&task.UpdatedAt,
 	)
@@ -102,12 +117,13 @@ func (s *SQLiteStorage) GetByID(id int64) (*todo.Task, error) {
 		return nil, fmt.Errorf("failed to get task: %w", err)
 	}
 
+	task.RecurrencePattern = recurrence.Pattern(recurrencePattern)
 	return task, nil
 }
 
 func (s *SQLiteStorage) List(filter TimeFilter) ([]*todo.Task, error) {
 	query := `
-	SELECT id, title, details, date, completed, created_at, updated_at
+	SELECT id, title, details, date, completed, recurrence_pattern, created_at, updated_at
 	FROM tasks
 	WHERE 1=1
 	`
@@ -140,18 +156,21 @@ func (s *SQLiteStorage) List(filter TimeFilter) ([]*todo.Task, error) {
 	var tasks []*todo.Task
 	for rows.Next() {
 		task := &todo.Task{}
+		var recurrencePattern string
 		err := rows.Scan(
 			&task.ID,
 			&task.Title,
 			&task.Details,
 			&task.Date,
 			&task.Completed,
+			&recurrencePattern,
 			&task.CreatedAt,
 			&task.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan task: %w", err)
 		}
+		task.RecurrencePattern = recurrence.Pattern(recurrencePattern)
 		tasks = append(tasks, task)
 	}
 
@@ -165,7 +184,7 @@ func (s *SQLiteStorage) List(filter TimeFilter) ([]*todo.Task, error) {
 func (s *SQLiteStorage) Update(task *todo.Task) error {
 	query := `
 	UPDATE tasks
-	SET title = ?, details = ?, date = ?, completed = ?, updated_at = ?
+	SET title = ?, details = ?, date = ?, completed = ?, recurrence_pattern = ?, updated_at = ?
 	WHERE id = ?
 	`
 
@@ -174,6 +193,7 @@ func (s *SQLiteStorage) Update(task *todo.Task) error {
 		task.Details,
 		task.Date,
 		task.Completed,
+		string(task.RecurrencePattern),
 		task.UpdatedAt,
 		task.ID,
 	)

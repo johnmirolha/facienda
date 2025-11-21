@@ -18,6 +18,7 @@ type Task struct {
 	Details           string
 	Date              time.Time
 	Completed         bool
+	Skipped           bool
 	RecurrencePattern recurrence.Pattern
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
@@ -70,6 +71,16 @@ func (t *Task) Complete() {
 
 func (t *Task) Incomplete() {
 	t.Completed = false
+	t.UpdatedAt = time.Now()
+}
+
+func (t *Task) Skip() {
+	t.Skipped = true
+	t.UpdatedAt = time.Now()
+}
+
+func (t *Task) Unskip() {
+	t.Skipped = false
 	t.UpdatedAt = time.Now()
 }
 

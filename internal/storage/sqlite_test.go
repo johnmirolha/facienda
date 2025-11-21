@@ -207,3 +207,100 @@ func TestIntegration_CompleteIncomplete(t *testing.T) {
 		t.Error("expected task to be incomplete")
 	}
 }
+
+func TestIntegration_SkipUnskip(t *testing.T) {
+	store, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	task, _ := todo.NewTask("Test task", "", time.Now())
+	if err := store.Create(task); err != nil {
+		t.Fatalf("failed to create task: %v", err)
+	}
+
+	// Verify task is not skipped initially
+	if task.Skipped {
+		t.Error("expected task to not be skipped initially")
+	}
+
+	// Skip the task
+	task.Skip()
+	if err := store.Update(task); err != nil {
+		t.Fatalf("failed to skip task: %v", err)
+	}
+
+	retrieved, _ := store.GetByID(task.ID)
+	if !retrieved.Skipped {
+		t.Error("expected task to be skipped")
+	}
+
+	// Unskip the task
+	retrieved.Unskip()
+	if err := store.Update(retrieved); err != nil {
+		t.Fatalf("failed to unskip task: %v", err)
+	}
+
+	retrieved, _ = store.GetByID(task.ID)
+	if retrieved.Skipped {
+		t.Error("expected task to be unskipped")
+	}
+}
+
+func TestIntegration_SkippedTasksNotInList(t *testing.T) {
+	store, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	now := time.Now()
+
+	// Create two tasks
+	task1, _ := todo.NewTask("Task 1", "", now)
+	task2, _ := todo.NewTask("Task 2", "", now)
+
+	if err := store.Create(task1); err != nil {
+		t.Fatalf("failed to create task1: %v", err)
+	}
+	if err := store.Create(task2); err != nil {
+		t.Fatalf("failed to create task2: %v", err)
+	}
+
+	// List should show both tasks
+	tasks, err := store.List(FilterCurrent)
+	if err != nil {
+		t.Fatalf("failed to list tasks: %v", err)
+	}
+	if len(tasks) != 2 {
+		t.Errorf("expected 2 tasks, got %d", len(tasks))
+	}
+
+	// Skip task1
+	task1.Skip()
+	if err := store.Update(task1); err != nil {
+		t.Fatalf("failed to skip task1: %v", err)
+	}
+
+	// List should now show only task2
+	tasks, err = store.List(FilterCurrent)
+	if err != nil {
+		t.Fatalf("failed to list tasks: %v", err)
+	}
+	if len(tasks) != 1 {
+		t.Errorf("expected 1 task after skip, got %d", len(tasks))
+	}
+	if len(tasks) > 0 && tasks[0].Title != "Task 2" {
+		t.Errorf("expected 'Task 2', got %q", tasks[0].Title)
+	}
+
+	// Unskip task1
+	task1.Unskip()
+	if err := store.Update(task1); err != nil {
+		t.Fatalf("failed to unskip task1: %v", err)
+	}
+
+	// List should show both tasks again
+	tasks, err = store.List(FilterCurrent)
+	if err != nil {
+		t.Fatalf("failed to list tasks: %v", err)
+	}
+	if len(tasks) != 2 {
+		t.Errorf("expected 2 tasks after unskip, got %d", len(tasks))
+	}
+}

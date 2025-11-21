@@ -20,6 +20,7 @@ type Task struct {
 	Completed         bool
 	Skipped           bool
 	RecurrencePattern recurrence.Pattern
+	Tags              []*Tag
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 }
@@ -94,6 +95,16 @@ func (t *Task) Update(title, details string) error {
 	return nil
 }
 
+// SetTags updates the task's tags with validation
+func (t *Task) SetTags(tags []*Tag) error {
+	if err := ValidateTaskTags(tags); err != nil {
+		return err
+	}
+	t.Tags = tags
+	t.UpdatedAt = time.Now()
+	return nil
+}
+
 // GenerateNextInstance creates the next instance of a recurring task
 // Returns nil if the task is not recurring
 func (t *Task) GenerateNextInstance() (*Task, error) {
@@ -113,6 +124,7 @@ func (t *Task) GenerateNextInstance() (*Task, error) {
 		Date:              nextDate,
 		Completed:         false,
 		RecurrencePattern: t.RecurrencePattern,
+		Tags:              t.Tags, // Copy tags to next instance
 		CreatedAt:         now,
 		UpdatedAt:         now,
 	}, nil

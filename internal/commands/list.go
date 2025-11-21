@@ -34,7 +34,12 @@ var listCmd = &cobra.Command{
 				title = fmt.Sprintf("%s ↻", task.Title)
 			}
 
-			fmt.Printf("%s %d. %s\n", status, task.ID, title)
+			fmt.Printf("%s %d. %s", status, task.ID, title)
+			if len(task.Tags) > 0 {
+				fmt.Printf(" %s", formatTagList(task.Tags))
+			}
+			fmt.Println()
+
 			if task.Details != "" {
 				fmt.Printf("   %s\n", task.Details)
 			}
@@ -80,7 +85,12 @@ var pastCmd = &cobra.Command{
 				title = fmt.Sprintf("%s ↻", task.Title)
 			}
 
-			fmt.Printf("%s %d. %s\n", status, task.ID, title)
+			fmt.Printf("%s %d. %s", status, task.ID, title)
+			if len(task.Tags) > 0 {
+				fmt.Printf(" %s", formatTagList(task.Tags))
+			}
+			fmt.Println()
+
 			if task.Details != "" {
 				fmt.Printf("   %s\n", task.Details)
 			}
@@ -126,7 +136,76 @@ var futureCmd = &cobra.Command{
 				title = fmt.Sprintf("%s ↻", task.Title)
 			}
 
-			fmt.Printf("%s %d. %s\n", status, task.ID, title)
+			fmt.Printf("%s %d. %s", status, task.ID, title)
+			if len(task.Tags) > 0 {
+				fmt.Printf(" %s", formatTagList(task.Tags))
+			}
+			fmt.Println()
+
+			if task.Details != "" {
+				fmt.Printf("   %s\n", task.Details)
+			}
+			if task.IsRecurring() {
+				fmt.Printf("   Recurs: %s\n", task.RecurrencePattern.String())
+			}
+		}
+
+		return nil
+	},
+}
+
+var (
+	searchTag string
+)
+
+var searchCmd = &cobra.Command{
+	Use:   "search",
+	Short: "Search tasks by tag",
+	Long: `Search for tasks with a specific tag.
+
+Examples:
+  facienda search --tag work
+  facienda search -t personal`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if searchTag == "" {
+			return fmt.Errorf("--tag flag is required")
+		}
+
+		tasks, err := store.ListByTag(searchTag, storage.FilterAll)
+		if err != nil {
+			return err
+		}
+
+		if len(tasks) == 0 {
+			fmt.Printf("No tasks found with tag '%s'.\n", searchTag)
+			return nil
+		}
+
+		fmt.Printf("Tasks with tag '%s':\n", searchTag)
+		currentDate := ""
+		for _, task := range tasks {
+			taskDate := task.Date.Format("2006-01-02")
+			if taskDate != currentDate {
+				currentDate = taskDate
+				fmt.Printf("\n%s:\n", currentDate)
+			}
+
+			status := "[ ]"
+			if task.Completed {
+				status = "[✓]"
+			}
+
+			title := task.Title
+			if task.IsRecurring() {
+				title = fmt.Sprintf("%s ↻", task.Title)
+			}
+
+			fmt.Printf("%s %d. %s", status, task.ID, title)
+			if len(task.Tags) > 0 {
+				fmt.Printf(" %s", formatTagList(task.Tags))
+			}
+			fmt.Println()
+
 			if task.Details != "" {
 				fmt.Printf("   %s\n", task.Details)
 			}
@@ -140,7 +219,9 @@ var futureCmd = &cobra.Command{
 }
 
 func init() {
+	searchCmd.Flags().StringVarP(&searchTag, "tag", "t", "", "tag to search for")
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(pastCmd)
 	rootCmd.AddCommand(futureCmd)
+	rootCmd.AddCommand(searchCmd)
 }
